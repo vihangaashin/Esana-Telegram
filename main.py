@@ -7,10 +7,11 @@ import os
 
 app = Flask(__name__)
 
+
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token from BotFather
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+BOT_TOKEN = '7677096512:AAF3ojlIuKk_4mfdnlRATwXMxUX903YuIsw'
 # Replace 'CHAT_ID' with the actual chat ID you want to send a message to
-CHAT_ID = 'YOUR_CHAT_ID'
+CHAT_ID = '-1002460036696'
 
 # Telegram API URL
 BASE_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
@@ -25,6 +26,7 @@ if os.path.exists(DATABASE_PATH):
 # Function to get the latest news
 def get_latest_news():
     try:
+        # Step 1: Get the main page to retrieve the csrfHash and cookies
         main_page = requests.get('https://www.helakuru.lk/esana', headers={
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.33',
         })
@@ -53,11 +55,18 @@ def get_latest_news():
 
         if news_response.status_code != 200:
             print(f"Failed to load news data. Status code: {news_response.status_code}")
+            print(news_response.text)
             return None
 
-        news_data = json.loads(news_response.text)
+        try:
+            news_data = json.loads(news_response.text)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse JSON. Error: {e}")
+            print(news_response.text)
+            return None
+
         if 'NEWS' in news_data and len(news_data['NEWS']) > 0:
-            return news_data['NEWS'][0]
+            return news_data['NEWS'][0]  # Get the latest news item
         else:
             print("No news found in the response.")
             return None
@@ -72,7 +81,10 @@ def send_latest_news(news):
         if news_id in database:
             return
 
-        message = f"\U0001F4F0 *{news['titleSi'].strip()}*\n\n"
+        # Prepare the Sinhala message with timestamps
+        message = f"*{news['titleSi'].strip()}*\n\n"
+
+        # Adding the content in Sinhala with timestamps (if available)
         if 'contentSi' in news:
             for content in news['contentSi']:
                 if 'keys' in content:
@@ -81,6 +93,7 @@ def send_latest_news(news):
                 elif content.get('type') == 'text':
                     message += f"{content.get('data', '').strip()}\n\n"
 
+        # Handle media (cover image) with the message including timestamps
         if news.get('thumb'):
             image_url = news['thumb']
             image_content = requests.get(image_url).content
@@ -103,15 +116,50 @@ def send_latest_news(news):
         else:
             print(f'Failed to send news. Status code: {response.status_code}')
             print(response.text)
+
+        # Send additional images if available
+        if 'contentSi' in news:
+            for content in news['contentSi']:
+                if content.get('type') == 'image':
+                    image_url = content.get('data')
+                    if image_url:
+                        image_content = requests.get(image_url).content
+                        response = requests.post(
+                            f"{BASE_URL}/sendPhoto",
+                            data={'chat_id': CHAT_ID},
+                            files={'photo': ('image.jpg', image_content)}
+                        )
+                        if response.status_code == 200:
+                            print('Additional Image Sent:', image_url)
+                        else:
+                            print(f'Failed to send additional image. Status code: {response.status_code}')
+                            print(response.text)
+
+        # Send voice messages if available
+        if 'contentSi' in news:
+            for content in news['contentSi']:
+                if content.get('type') == 'voice':
+                    voice_url = content.get('data')
+                    if voice_url:
+                        voice_content = requests.get(voice_url).content
+                        response = requests.post(
+                            f"{BASE_URL}/sendAudio",
+                            data={'chat_id': CHAT_ID, 'caption': 'Voice message', 'parse_mode': 'Markdown'},
+                            files={'audio': ('voice.mp3', voice_content)}
+                        )
+                        if response.status_code == 200:
+                            print('Voice Message Sent:', voice_url)
+                        else:
+                            print(f'Failed to send voice message. Status code: {response.status_code}')
+                            print(response.text)
     else:
         print('No news found to send.')
 
-# Background thread to periodically fetch and send news
-def background_task():
+if __name__ == "__main__":
     while True:
-        news = get_latest_news()
+        news = get_latest_news()  # Get the latest news
         send_latest_news(news)
-        time.sleep(60)
+        time.sleep(60)  # Wait for 1 minute before checking again
 
 @app.route("/")
 def home():
