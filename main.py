@@ -154,7 +154,14 @@ def send_latest_news(news):
                             print(response.text)
     else:
         print('No news found to send.')
+# Background task to fetch and send news periodically
+def background_task():
+    while True:
+        news = get_latest_news()
+        send_latest_news(news)
+        time.sleep(60)  # Fetch news every 60 seconds
 
+# Root route for the Flask app
 @app.route("/")
 def home():
     return "The Telegram bot is running!"
