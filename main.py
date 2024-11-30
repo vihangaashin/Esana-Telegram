@@ -82,7 +82,7 @@ def send_latest_news(news):
             return
 
         # Prepare the Sinhala message with timestamps
-        message = f"\U0001F4F0 *{news['titleSi'].strip()}*\n\n"
+        message = f"*{news['titleSi'].strip()}*\n\n"
 
         # Adding the content in Sinhala with timestamps (if available)
         if 'contentSi' in news:
