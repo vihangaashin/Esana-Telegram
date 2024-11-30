@@ -7,65 +7,23 @@ import os
 
 app = Flask(__name__)
 
+
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token from BotFather
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+BOT_TOKEN = '7677096512:AAF3ojlIuKk_4mfdnlRATwXMxUX903YuIsw'
 # Replace 'CHAT_ID' with the actual chat ID you want to send a message to
-CHAT_ID = 'YOUR_CHAT_ID'
+CHAT_ID = '-1002460036696'
 
 # Telegram API URL
 BASE_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
-# Path to the database file to keep track of sent news IDs
+# Database to keep track of sent news IDs
 DATABASE_PATH = './database.json'
 database = []
-# Load the database file if it exists
 if os.path.exists(DATABASE_PATH):
     with open(DATABASE_PATH, 'r') as db_file:
         database = json.load(db_file)
 
-# Function to fetch the latest news from the source
-def get_latest_news():
-    try:
-        # Step 1: Fetch the main page to retrieve CSRF hash and cookies
-        main_page = requests.get('https://www.helakuru.lk/esana', headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'
-        })
-        if main_page.status_code != 200:
-            print(f"Failed to load main page. Status code: {main_page.status_code}")
-            return None
-
-        # Extract the CSRF hash from the response
-        csrf_hash = main_page.text.split('csrfHash')[1].split("';")[0].split("'")[1]
-        cookies = main_page.cookies.get_dict()
-
-        # Step 2: Post request to fetch news data
-        news_response = requests.post(
-            'https://www.helakuru.lk/esana/load',
-            headers={
-                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                'Referer': 'https://www.helakuru.lk/esana',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            },
-            cookies=cookies,
-            data=f"newsLimit=&esanaWidget=false&csrf={csrf_hash}&category="
-        )
-
-        if news_response.status_code != 200:
-            print(f"Failed to load news data. Status code: {news_response.status_code}")
-            return None
-
-        # Parse the news data as JSON
-        news_data = news_response.json()
-        if 'NEWS' in news_data and len(news_data['NEWS']) > 0:
-            return news_data['NEWS'][0]  # Return the latest news item
-        else:
-            print("No news found.")
-            return None
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
-# Function to send the latest news to a Telegram chat
+# Function to get the latest news
 def get_latest_news():
     try:
         # Step 1: Get the main page to retrieve the csrfHash and cookies
@@ -197,14 +155,6 @@ def send_latest_news(news):
     else:
         print('No news found to send.')
 
-# Background task to fetch and send news periodically
-def background_task():
-    while True:
-        news = get_latest_news()
-        send_latest_news(news)
-        time.sleep(60)  # Fetch news every 60 seconds
-
-# Root route for the Flask app
 @app.route("/")
 def home():
     return "The Telegram bot is running!"
