@@ -155,11 +155,11 @@ def send_latest_news(news):
     else:
         print('No news found to send.')
 
-if __name__ == "__main__":
+def background_task():
     while True:
-        news = get_latest_news()  # Get the latest news
+        news = get_latest_news()
         send_latest_news(news)
-        time.sleep(60)  # Wait for 1 minute before checking again
+        time.sleep(60)
 
 @app.route("/")
 def home():
